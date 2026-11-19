@@ -1,0 +1,29 @@
+# Exo AI on Contabo: the upstream self-host stack, with our GHCR images.
+#
+# Use together with the upstream file, from deployment/self-host:
+#   docker compose -f compose.yaml -f ../exo/compose.exo.yaml --env-file .env pull
+#   docker compose -f compose.yaml -f ../exo/compose.exo.yaml --env-file .env up -d --no-build --wait
+#
+# Never `--build` on the VPS: images come from .github/workflows/exo-ai-images.yml.
+# The server listens on 127.0.0.1:${PORT} only; the exo-contabo Cloudflare tunnel
+# carries ai.exoflowos.com to it. Do not use the upstream `https` profile (it
+# wants host ports 80/443).
+#
+# Kept in its own folder so upstream merges of deployment/self-host stay clean.
+
+services:
+  server:
+    image: ghcr.io/jaysteel-bit/exo-ai-server:${EXO_AI_TAG:-latest}
+    pull_policy: always
+
+  browser:
+    image: ghcr.io/jaysteel-bit/exo-ai-browser:${EXO_AI_TAG:-latest}
+    pull_policy: always
+
+  workspace:
+    image: ghcr.io/jaysteel-bit/exo-ai-workspace:${EXO_AI_TAG:-latest}
+    pull_policy: always
+
+  workspace-network:
+    image: ghcr.io/jaysteel-bit/exo-ai-workspace:${EXO_AI_TAG:-latest}
+    pull_policy: missing

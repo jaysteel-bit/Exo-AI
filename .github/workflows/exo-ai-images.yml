@@ -1,0 +1,73 @@
+# Exo AI images: built on GitHub's runners, never on our VPS.
+#
+# The Contabo box runs Exo Base, Team chat, HeyForm, Hermes and the software
+# factory. A build there drove it out of memory on 2026-11-18 and took every
+# tunnel host down until a reboot. Builds belong on a machine whose only job is
+# the build.
+#
+# Publishes the three images the self-host stack needs:
+#   ghcr.io/<owner>/exo-ai-server:<tag>     (deployment/self-host/Dockerfile)
+#   ghcr.io/<owner>/exo-ai-browser:<tag>    (Dockerfile.browser)
+#   ghcr.io/<owner>/exo-ai-workspace:<tag>  (Dockerfile.workspace)
+# <tag> is the short commit and, on exo-main, also `latest`.
+# Deploy with deployment/exo/compose.exo.yaml (see REBRAND.md).
+
+name: Exo AI images
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [exo-main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  image:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: server
+            file: deployment/self-host/Dockerfile
+          - name: browser
+            file: Dockerfile.browser
+          - name: workspace
+            file: Dockerfile.workspace
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "short=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/exo-ai-${{ matrix.name }}:${{ steps.tag.outputs.short }}
+            ${{ github.ref_name == 'exo-main' && format('{0}/{1}/exo-ai-{2}:latest', env.REGISTRY, github.repository_owner, matrix.name) || '' }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.licenses=Apache-2.0
+          cache-from: type=gha,scope=exo-ai-${{ matrix.name }}
+          cache-to: type=gha,scope=exo-ai-${{ matrix.name }},mode=max
