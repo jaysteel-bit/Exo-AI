@@ -44,7 +44,7 @@ jobs:
           - name: workspace
             file: Dockerfile.workspace
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - id: tag
         run: echo "short=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
